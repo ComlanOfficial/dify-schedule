@@ -31,12 +31,13 @@ class WorkflowTask extends Task {
       }
       const user = 'dify-schedule'
       const workflow = new WorkflowClient(this.dify.token, env.DIFY_BASE_URL);
-      console.log(`正在获取Dify工作流基础信息...`)
-      const info = await workflow.info(user);
-      this.workfolwName = info.data?.name || '';
-      console.log(`Dify工作流【${info.data.name}】开始执行...`)
-      const response =  await workflow.getWorkflowResult(inputs, user,true)
-      this.result = response.text || ''
+      
+      // --- 修改部分开始 ---
+      // 跳过获取工作流信息，直接执行
+      console.log(`Dify工作流开始执行... (已跳过获取信息步骤)`);
+      const response =  await workflow.getWorkflowResult(inputs, user, true);
+      this.result = response.text || '';
+      // --- 修改部分结束 ---
     }
 
     toString() {
@@ -45,16 +46,32 @@ class WorkflowTask extends Task {
 }
 
 async function run(args) {
+    // 检查 DIFY_TOKENS 是否已定义
+    if (!env.DIFY_TOKENS) {
+      console.error("错误：环境变量 DIFY_TOKENS 未设置。");
+      Notify.pushMessage({
+        title: "Dify工作流定时助手 - 错误",
+        content: "环境变量 DIFY_TOKENS 未设置，请检查您的配置。",
+        msgtype: "text"
+      });
+      return;
+    }
+
     const tokens = env.DIFY_TOKENS.split(';');
     let messageList = [];
     for (let token of tokens) {
+      // 过滤掉可能的空 token
+      if (!token) continue;
+      
       const workflow = new WorkflowTask({token});
 
       await workflow.run(); // 执行
 
       const content = workflow.toString();
 
+      console.log('--- 工作流执行结果 ---');
       console.log(content); // 打印结果
+      console.log('--- 执行结束 ---');
 
       messageList.push(content);
     }
@@ -68,11 +85,13 @@ async function run(args) {
   }
 
   run(process.argv.splice(2)).catch(error => {
+    console.error("脚本执行失败:", error);
     Notify.pushMessage({
-      title: "",
-      content: `Error: ${error.message}`,
-      msgtype: "html"
+      title: "Dify工作流定时助手 - 失败",
+      content: `错误: ${error.message}`,
+      msgtype: "text"
     });
 
-    throw error;
+    // 在 GitHub Actions 中，非零退出码表示失败
+    process.exit(1);
   });
