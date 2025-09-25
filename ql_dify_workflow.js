@@ -18,7 +18,7 @@ if (process.env.DIFY_TOKENS) {
   } else if (process.env.DIFY_TOKENS.indexOf("\n") > -1) {
     tokensArr = process.env.DIFY_TOKENS.split("\n");
   } else {
-    CookieJJs = [process.env.DIFY_TOKENS];
+    tokensArr = [process.env.DIFY_TOKENS];
   }
 }
 tokensArr = [...new Set(tokensArr.filter((item) => !!item))];
@@ -64,12 +64,13 @@ class WorkflowTask extends Task {
       this.dify.token,
       DIFY_BASE_URL
     );
-    console.log(`正在获取Dify工作流基础信息...`);
-    const info = await workflow.info(user);
-    this.workfolwName = info.data?.name || "";
-    console.log(`Dify工作流【${info.data.name}】开始执行...`);
+    
+    // --- 修改部分开始 ---
+    // 跳过获取工作流信息，直接执行
+    console.log(`Dify工作流开始执行... (已跳过获取信息步骤)`);
     const response = await workflow.getWorkflowResult(inputs, user, true);
     this.result = response.text || "";
+    // --- 修改部分结束 ---
   }
 
   toString() {
@@ -82,7 +83,8 @@ class WorkflowTask extends Task {
     $.msg($.name, "【提示】请先填写Dify工作流token");
     return;
   }
-  let messageList = [];1
+  // 由于脚本中 notify 未定义，暂时注释掉
+  // let messageList = [];
   for (let token of tokensArr) {
     const workflow = new WorkflowTask({ token });
 
@@ -90,17 +92,19 @@ class WorkflowTask extends Task {
 
     const content = workflow.toString();
 
+    console.log('--- 工作流执行结果 ---');
     console.log(content); // 打印结果
+    console.log('--- 执行结束 ---');
 
-    messageList.push(content);
+    // messageList.push(content);
   }
 
-  const message = messageList.join(`\n${"-".repeat(15)}\n`);
-  await notify.sendNotify("Dify定时工作流", message);
+  // const message = messageList.join(`\n${"-".repeat(15)}\n`);
+  // await notify.sendNotify("Dify定时工作流", message);
 })()
   .catch((e) => {
     $.log("", `❌ ${$.name}, 失败! 原因: ${e}!`, "");
-    notify.sendNotify("Dify定时工作流-失败", e.message);
+    // await notify.sendNotify("Dify定时工作流-失败", e.message);
   })
   .finally(() => {
     $.done();
