@@ -34,7 +34,7 @@ class WorkflowTask extends Task {
       
       // --- 修改部分开始 ---
       // 跳过获取工作流信息，直接执行
-      console.log(`Dify工作流开始执行... (已跳过获取信息步骤)`);
+      console.log(`Dify工作流开始执行... (v2 - 已跳过获取信息步骤)`);
       const response =  await workflow.getWorkflowResult(inputs, user, true);
       this.result = response.text || '';
       // --- 修改部分结束 ---
