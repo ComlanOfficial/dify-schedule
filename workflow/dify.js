@@ -34,26 +34,21 @@ class WorkflowTask extends Task {
       
       console.log(`Dify工作流开始执行... (API Key: ...${this.dify.token.slice(-4)})`);
       
-      // 直接执行工作流
-      const response =  await workflow.getWorkflowResult(inputs, user, false); // 改为 false 获取完整对象
+      // --- 核心修改：将最后一个参数从 true 改为 false，强制使用“同步阻塞”模式 ---
+      const response =  await workflow.getWorkflowResult(inputs, user, false); 
       
-      // --- 修改部分开始 ---
-      // 增加健壮性，确保无论返回什么结构都能提取出有效信息
       console.log('工作流原始返回:', JSON.stringify(response, null, 2));
 
+      // --- 提取结果的逻辑保持不变 ---
       if (response && response.data && response.data.outputs) {
-        // 如果有 outputs，将其转换为字符串
-        this.result = JSON.stringify(response.data.outputs, null, 2);
+        this.result = `执行成功！\n输出内容:\n${JSON.stringify(response.data.outputs, null, 2)}`;
       } else if (response && response.text) {
-        // 兼容旧的 .text 逻辑
-        this.result = response.text;
+        this.result = `执行成功！\n输出文本:\n${response.text}`;
       } else if (response) {
-        // 如果上面都没有，就返回整个 response 对象
-        this.result = JSON.stringify(response, null, 2);
+        this.result = `执行成功！\n原始返回:\n${JSON.stringify(response, null, 2)}`;
       } else {
         this.result = "工作流执行完毕，但未返回任何有效内容。";
       }
-      // --- 修改部分结束 ---
     }
 
     toString() {
