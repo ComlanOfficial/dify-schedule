@@ -50,29 +50,24 @@ class WorkflowTask extends Task {
       
       console.log('工作流原始返回:', JSON.stringify(response.data, null, 2));
 
-      // --- 核心修改：将返回的 JSON 转换为 HTML ---
+      // --- 核心修改：现在代码会优先寻找任何string类型的输出作为邮件内容 ---
       if (response.data && response.data.data && response.data.data.outputs) {
         const outputs = response.data.data.outputs;
-        let htmlResult = '<div style="font-family: sans-serif; line-height: 1.6;">';
-        htmlResult += '<h3>执行成功！</h3><h4>输出内容:</h4>';
 
-        // 检查是否存在一个包含主要文本的 'output' 键
-        if (outputs.output && typeof outputs.output === 'string') {
-            // 将文本中的换行符 \n 替换为 HTML 的 <br> 标签
-            const formattedOutput = outputs.output.replace(/\n/g, '<br>');
-            htmlResult += `<div style="border: 1px solid #e0e0e0; padding: 15px; border-radius: 8px; background-color: #f9f9f9;">${formattedOutput}</div>`;
+        // 查找第一个值为字符串类型的输出变量
+        const outputKey = Object.keys(outputs).find(key => typeof outputs[key] === 'string');
+
+        if (outputKey) {
+            console.log(`成功找到字符串类型的输出变量 [${outputKey}]，将直接使用其内容。`);
+            this.result = outputs[outputKey];
         } else {
-            // 如果结构不同，则美化显示整个 JSON
+            console.log("未找到任何字符串类型的输出变量，将美化显示整个 outputs JSON。");
+            // 如果没有任何字符串输出，则美化显示整个 JSON 以便调试
             const formattedJson = JSON.stringify(outputs, null, 2);
-            htmlResult += `<pre style="background-color: #f5f5f5; padding: 15px; border-radius: 8px; white-space: pre-wrap; word-wrap: break-word;"><code>${formattedJson}</code></pre>`;
+            this.result = `<p>执行成功，但未在返回结果中找到任何文本类型的输出。原始输出如下：</p><pre style="background-color: #f5f5f5; padding: 15px; border-radius: 8px; white-space: pre-wrap; word-wrap: break-word;"><code>${formattedJson}</code></pre>`;
         }
-        htmlResult += '</div>';
-        this.result = htmlResult;
-
-      } else if (response.data) {
-        this.result = `执行成功！\n但未找到 outputs，原始返回:\n${JSON.stringify(response.data, null, 2)}`;
       } else {
-        this.result = "工作流执行完毕，但未返回任何有效内容。";
+        this.result = `<p>工作流执行成功，但返回的数据结构不符合预期。</p><pre><code>${JSON.stringify(response.data, null, 2)}</code></pre>`;
       }
     }
 
@@ -102,11 +97,10 @@ async function run(args) {
         await workflow.run();
         const content = workflow.toString();
         
-        console.log(`--- [任务 ${i + 1}/${tokens.length}] 执行结果 ---`);
-        // 日志中仍然打印原始HTML，方便调试
+        console.log(`--- [任务 ${i + 1}/${tokens.length}] 执行结果 (HTML) ---`);
         console.log(content); 
         
-        messageList.push(`<h4>[任务 ${i + 1} 成功]</h4>${content}`);
+        messageList.push(`<h4>[任务 ${i + 1}]</h4>${content}`);
 
       } catch (error) {
         const errorMessage = error.response ? JSON.stringify(error.response.data, null, 2) : error.message;
@@ -121,7 +115,7 @@ async function run(args) {
     if (messageList.length > 0) {
       const message = messageList.join(`<hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">`);
       
-      // --- 核心修改：将消息类型从 "text" 改为 "html" ---
+      // 确保邮件以 HTML 格式发送
       Notify.pushMessage({ 
           title: "Dify工作流定时助手", 
           content: message, 
