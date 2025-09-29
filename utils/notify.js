@@ -19,7 +19,7 @@ export class Notify {
     }
 
     const transporter = nodemailer.createTransport({
-      host: "mail." + auth.user.match(/@(.*)/)[1],
+      host: "192.168.99.100",
       secure: true,
       port: 25,
       auth,
