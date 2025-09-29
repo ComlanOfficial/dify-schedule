@@ -21,7 +21,7 @@ export class Notify {
     const transporter = nodemailer.createTransport({
       host: "mail." + auth.user.match(/@(.*)/)[1],
       secure: true,
-      port: 465,
+      port: 25,
       auth,
       tls: {
         // do not fail on invalid certs
